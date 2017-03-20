@@ -1,0 +1,5 @@
+This directory will be for pure PHP handlers.
+
+
+EX: Login handler, upload image handler 
+

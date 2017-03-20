@@ -1,0 +1,3 @@
+All the images should go in here.
+
+Note: It would be nice to have a directory structure for the images. Keep this in mind

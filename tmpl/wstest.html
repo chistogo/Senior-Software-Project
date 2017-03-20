@@ -1,0 +1,10 @@
+<html>
+    <head>
+        <title>WebSocket Echo Test</title>
+        <script src="/static/js/wstest.js"></script>
+    </head>
+    <body>
+        <input onkeypress="if(this.value) {if (window.event.keyCode == 13) { sendMessage(this.value); this.value = null; }}"/>
+        <div id="output"></div>
+    </body>
+</html>
