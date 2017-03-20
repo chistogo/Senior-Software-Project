@@ -136,7 +136,7 @@ func joinHandler(w http.ResponseWriter, r *http.Request) {
 	playerName := r.PostFormValue("name") // to get params value with key
 	roomID := r.PostFormValue("room")
 
-	//Forum Validation
+	//Form Validation
 	if playerName == "" || roomID == ""{ //Making sure the Params were sent
 		res.Status = false
 		res.Message = "Invalid Parameters"
