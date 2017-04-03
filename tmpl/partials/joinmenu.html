@@ -1,0 +1,21 @@
+{{ define "joinmenu" }}
+<div class="col-row" style="width: 100%">
+    <button style="margin: 0px;" type="button"  class="btn menu-btn main-menu-btn btn-primary" onclick="show('main-menu'); hide('join-menu')"><i class="fa fa-reply" aria-hidden="true"></i></button>
+    <h1 style="margin-top: 0px;" class="text-center shake" >Join a Game</h1>
+
+    <form id="join-form">
+        <div class="input-group">
+            <span class="input-group-addon"><i class="glyphicon glyphicon-user"></i></span>
+            <input id="user-name" type="text" class="form-control" name="name" placeholder="Enter Name">
+        </div>
+        <br>
+        <div class="input-group">
+            <span class="input-group-addon"><i class="glyphicon glyphicon-circle-arrow-right"></i></span>
+            <input id="room-code" type="text" class="form-control" name="room" placeholder="Enter Code">
+        </div>
+
+        <button style="margin-top: 20px" type="submit" class="btn center-block btn-primary"><i class="glyphicon glyphicon-globe" aria-hidden="true"></i> Join Game</button>
+
+    </form>
+</div>
+{{ end }}

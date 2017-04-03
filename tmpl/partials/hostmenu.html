@@ -1,0 +1,70 @@
+{{define "hostmenu"}}
+<div class="col-row" style="width: 100%">
+    <div class="col-md-12">
+    <button style="margin: 0px;" type="button" class="btn menu-btn main-menu-btn btn-primary" onclick="show('main-menu'); hide('host-menu')"><i class=" fa fa-reply" aria-hidden="true"></i></button>
+    <h1 style="margin-top: 0px;" class="text-center shake" >Host a Game</h1>
+
+
+
+
+        <div class="col-md-12">
+
+            <div class="col-md-4">
+
+                <div class="col-row">
+                    <img src="/static/imgs/pacman.png" class="gamesnapshot center-block">
+                </div>
+                <div class="col-row">
+                    <h3 class="text-center">Game 1</h3>
+                    <p>Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Aenean commodo ligula eget dolor.
+                        Aenean massa. Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus
+                        mus. Donec quam felis, ultricies nec, pellentesque eu, pretium quis, sem. Nulla consequat massa
+                        quis enim.
+                    </p>
+                    <button onclick="createGame('game1')" class="btn btn-block btn-primary">Host</button>
+                </div>
+
+            </div>
+            <div class="col-md-4">
+
+                <div class="col-row">
+                    <img src="/static/imgs/pacman.png" class="gamesnapshot center-block">
+                </div>
+                <div class="col-row">
+                    <h3 class="text-center">Game 2</h3>
+                    <p>Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Aenean commodo ligula eget dolor.
+                        Aenean massa. Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus
+                        mus. Donec quam felis, ultricies nec, pellentesque eu, pretium quis, sem. Nulla consequat massa
+                        quis enim.
+                    </p>
+                    <button onclick="createGame('game2')" class="btn btn-block btn-primary">Host</button>
+                </div>
+
+            </div>
+            <div class="col-md-4">
+
+                <div class="col-row">
+                    <img src="/static/imgs/pacman.png" class="gamesnapshot center-block">
+                </div>
+                <div class="col-row">
+                    <h3 class="text-center">Chat Game</h3>
+                    <p>Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Aenean commodo ligula eget dolor.
+                        Aenean massa. Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus
+                        mus. Donec quam felis, ultricies nec, pellentesque eu, pretium quis, sem. Nulla consequat massa
+                        quis enim.
+                    </p>
+                    <button onclick="createGame('chat')" class="btn btn-block btn-primary">Host</button>
+                </div>
+
+            </div>
+
+
+
+        </div>
+
+
+
+
+    </div>
+</div>
+{{end}}
