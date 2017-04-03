@@ -2,6 +2,12 @@
  * Created by Chris on 3/12/2017.
  */
 
+
+var html = '<input onkeypress="if(this.value) {if (window.event.keyCode == 13) { sendMessage(this.value); this.value = null; }}"/>'+
+    '<div id="output"></div>';
+
+
+
 function getParameterByName(name, url) {
     if (!url) {
         url = window.location.href;
@@ -40,10 +46,8 @@ function setCookie(key , value , expiration) {
 
 
 function init() {
-
-
+    document.write(html);
     if(getCookie("name") == undefined || getCookie("uuid") == undefined){
-
         return
     }
 

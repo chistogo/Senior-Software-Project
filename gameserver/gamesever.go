@@ -24,24 +24,32 @@ func CreateRoom(game *Game) *Room{
 	return &thisRoom
 }
 
-func (r Room) AddPlayer(player *Player) bool {
+func (r *Room) AddPlayer(player *Player) bool {
 
 	if len(r.Players) < r.Game.Players { // Make sure room is not full
 		r.Players[player.Uuid] = player // Add Player
-		player.Room = &r // Make sure the Player room is the room
+		player.Room = r // Make sure the Player room is the room
 		return true
 	}
 	return false
 }
 
-func (r Room) RemovePlayer(player *Player) {
+func (r *Room) AddHost(player *Player) bool {
+
+	r.Host = player // Add Player
+	player.Room = r // Make sure the Player room is the room
+	return true
+}
+
+
+func (r *Room) RemovePlayer(player *Player) {
 	delete(r.Players,player.Uuid)
 	player = nil
 
 }
 
 
-func (r Room) MessageAllPlayers(message string){
+func (r *Room) MessageAllPlayers(message string){
 	for _, v := range r.Players {
 		v.MessageReceive<- message
 	}
@@ -50,7 +58,7 @@ func (r Room) MessageAllPlayers(message string){
 
 
 //TODO Create a channel to stop the server
-func (r Room) StartServer(){
+func (r *Room) StartServer(){
 
 	for{
 		select {
@@ -68,8 +76,10 @@ func (r Room) StartServer(){
 
 // A game struct is some basic information about a game.
 type Game struct{
-	Id string // This is the name of the game
+	Id string // This is the short name of the game
 	Players int // This is the amount a players that game be in the game
+	Name string // This is the long name of the game
+	Script string // This is the source of the script
 }
 
 func NewPlayer(uuid string, name string, room *Room) *Player{
@@ -83,6 +93,11 @@ func NewPlayer(uuid string, name string, room *Room) *Player{
 
 	return &p
 }
+
+
+
+
+
 
 type Player struct{
 	Uuid string

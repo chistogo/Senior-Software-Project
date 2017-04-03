@@ -39,6 +39,8 @@ function setCookie(key , value , expiration) {
 }
 
 
+// Handle Input ============================================================
+
 $( "#join-form" ).submit(function( event ) {
     console.log("Attempting Ajax Request");
     $.ajax(
@@ -79,3 +81,46 @@ $( "#join-form" ).submit(function( event ) {
     event.preventDefault();
     return false;
 });
+
+function createGame(gameID){
+
+    $.ajax(
+        {
+            url : "create",
+            type: "POST",
+            //'foo='+ bar+'&calibri='+ nolibri,
+            data : 'gameID='+gameID,
+            success:function(data, textStatus, jqXHR)
+            {
+                //data: return data from server
+                console.log(data);
+                console.log(gameID);
+
+                try {
+                    data = JSON.parse(data);
+                } catch (e) {
+                    console.log(e);
+                    return;
+                }
+
+
+                if(data.status){
+                    setCookie("uuid",data.uuid);
+                    window.location = "/game?r="+data.roomid;
+
+                }else{
+                    alert("Error: "+data.message);
+                }
+
+
+
+            },
+            error: function(jqXHR, textStatus, errorThrown)
+            {
+                //if fails
+                console.log("ERROR: Ajax call failed");
+            }
+        });
+}
+
+// End Handle Input ========================================================

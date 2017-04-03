@@ -10,17 +10,31 @@ import (
 	"sswebsite/gameserver"
 	"github.com/satori/go.uuid"
 	"encoding/json"
+	"time"
+	"math/rand"
 )
 
 
 // This is global so that the templates are only generated once
+
+/*
+===================
+Debug Mode  Effects
+===================
+	> HTML Templates will be reloaded every refresh
+
+ */
+var debug bool = true
 var templates map[string]*template.Template
 var games map[string]*gameserver.Game
-var rooms map[string]*gameserver.Room
+var rooms map[string]*gameserver.Room // TODO: Look up if this needs a lock
+
 
 func main(){
 
 	fmt.Println("Welcome to the SS Experience Web Application Server")
+
+	rand.Seed(time.Now().UnixNano()) // SEED THAT RANDOM
 
 	initTemplates() // Initializes the templates and puts them in the global variable
 	initGames() // Creates and initializes the game structs
@@ -47,12 +61,22 @@ func initTemplates() {
 	//Combines the templates into one template for the index page
 	templates["index"] = template.Must(template.ParseFiles(
 		"tmpl/index.html",
+		"tmpl/partials/hostmenu.html",
+		"tmpl/partials/joinmenu.html",
+		"tmpl/partials/gamemenu.html",
 		"tmpl/partials/header.html",
 		"tmpl/partials/info-modal.html"))
+
+	// Game Page
+	templates["game"] = template.Must(template.ParseFiles(
+		"tmpl/game.html"))
+
 
 	// Web Socket Test Page
 	templates["wstest"] = template.Must(template.ParseFiles(
 		"tmpl/wstest.html"))
+
+
 
 }
 
@@ -65,7 +89,7 @@ func initGames() {
 
 	// Create the game structs here
 	games["TestGame"] = &gameserver.Game{Id: "testGame", Players:4}
-	games["game1"] = &gameserver.Game{Id: "Game 1", Players:8}
+	games["chat"] = &gameserver.Game{Id: "chat", Players:30,Name:"Chat Room",Script:"/static/js/wstest.js"}
 	games["game2"] = &gameserver.Game{Id: "Game 2", Players:2}
 
 }
@@ -89,8 +113,14 @@ func initHandlers(){
 	//Creating the handler for the index page
 	http.HandleFunc("/", index)
 
+	//Creating the handler for the game page
+	http.HandleFunc("/game", gameHandler)
+
 	//Handler for the AJAX request for joining room
 	http.HandleFunc("/join" , joinHandler);
+
+	//Handler for the AJAX request for creating a room
+	http.HandleFunc("/create" , createHandler);
 
 	//Handler for Websocket
 	http.HandleFunc("/ws", wsHandler)
@@ -102,6 +132,10 @@ func initHandlers(){
 
 
 func index(w http.ResponseWriter, r *http.Request) {
+
+	if(debug){
+		initTemplates()
+	}
 
 	if r.URL.Path != "/" {
 		unknownHandler(w, r, http.StatusNotFound)
@@ -136,7 +170,7 @@ func joinHandler(w http.ResponseWriter, r *http.Request) {
 	playerName := r.PostFormValue("name") // to get params value with key
 	roomID := r.PostFormValue("room")
 
-	//Form Validation
+	//Forum Validation
 	if playerName == "" || roomID == ""{ //Making sure the Params were sent
 		res.Status = false
 		res.Message = "Invalid Parameters"
@@ -170,9 +204,102 @@ func joinHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, res.toJSON())
 	}
 
+}
 
+func createHandler(w http.ResponseWriter, r *http.Request) {
+
+
+	if r.Header.Get("Origin") != "http://"+r.Host {
+		http.Error(w, "Origin not allowed", 403)
+		return
+	}
+
+	//This will be the return message to the client
+	res := response{}
+	err := r.ParseForm()
+	if err != nil{
+		log.Println(err)
+		return
+	}
+
+
+	//This variable is the gamename/id
+	gameID := r.PostFormValue("gameID") // to get params value with key
+
+	//Forum Validation
+	if gameID == ""{ //Making sure the Params were sent
+		res.Status = false
+		res.Message = "Invalid Parameters"
+		fmt.Fprint(w, res.toJSON())
+		return
+	}else if games[gameID] == nil{
+		res.Status = false
+		res.Message = "Invalid Game"
+		fmt.Fprint(w, res.toJSON())
+		return
+	}else{
+		fmt.Printf("GameID: %v ", gameID)
+	}
+
+	// Generating UUID for SS Host
+	id := uuid.NewV4()
+	uuidString := id.String()
+
+	//Get a unique roomID
+	roomID := RandomString(4)
+	for rooms[roomID] != nil  {
+		roomID = RandomString(4)
+	}
+
+
+	//Create room
+	rooms[roomID] = gameserver.CreateRoom(games[gameID])
+	go rooms[roomID].StartServer() // This is the thread that manages the room
+
+	// Remember that the host is just a Special Player
+	newPlayer := gameserver.NewPlayer(uuidString,"HOST", rooms[roomID])
+
+
+	if(rooms[roomID].AddHost(newPlayer)){
+		res.Status = true
+		res.Message = "Success"
+		res.GameID= gameID
+		res.RoomID = roomID
+		res.Uuid = id.String()
+		fmt.Fprint(w, res.toJSON())
+
+	}else{
+		res.Status = false
+		res.Message = "Could not add Host"
+		fmt.Fprint(w, res.toJSON())
+	}
 
 }
+
+
+
+
+
+func gameHandler(w http.ResponseWriter, r *http.Request) {
+
+	err := r.ParseForm()
+	if err != nil{
+		log.Println(err)
+	}
+
+	roomID := r.FormValue("r") // to get params value with key
+
+	if(rooms[roomID] == nil){
+		fmt.Fprint(w, "Error: Room not Found")
+		return
+	}
+
+	fmt.Printf("", )
+	templates["game"].Execute(w, rooms[roomID].Game)
+
+}
+
+
 
 
 func wsHandler(w http.ResponseWriter, r *http.Request) {
@@ -219,6 +346,12 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if(jnMsg.UUID == rooms[jnMsg.Room].Host.Uuid){
+		startHost(conn,rooms[jnMsg.Room].Host)
+		return
+	}
+
+
 	if(rooms[jnMsg.Room].Players[jnMsg.UUID] == nil){
 		conn.WriteMessage(websocket.TextMessage, []byte("Error: Player Not Found"))
 		return
@@ -226,6 +359,52 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 
 
 	startClient(conn,rooms[jnMsg.Room].Players[jnMsg.UUID])
+
+}
+func startHost(conn *websocket.Conn, player *gameserver.Player) {
+	fmt.Println("Host Websocket Connection Opened")
+
+	// This handles the Read of the socket
+	go func(){
+		for {
+
+			_ , data, err := conn.ReadMessage()
+			if err != nil {
+				player.Disconnect <- true
+				player.Room.RemovePlayer(player)
+				player = nil
+				if errr, ok := err.(net.Error); ok && errr.Timeout() {
+
+					fmt.Println("Client Disconnected")
+					return
+				}else{
+					log.Println(err)
+					return
+				}
+			}
+
+			player.Room.ClientMessage <- player.Name+": "+string(data[:])
+
+		}
+
+	}()
+
+	// This handles the writing of of the web socket
+	go func(){
+		for{
+			select {
+			case msg := <- player.MessageReceive:
+				conn.WriteMessage(websocket.TextMessage, []byte(msg))
+			case disconnect := <- player.Disconnect:
+				if(disconnect){
+					conn.Close()
+					return
+				}
+
+			}
+
+		}
+	}()
 
 }
 
@@ -280,30 +459,17 @@ func startClient(conn *websocket.Conn, player *gameserver.Player) {
 }
 
 
+func RandomString(num int) string{
 
+	legalChars := []rune("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
-func echo(conn *websocket.Conn) {
-	fmt.Println("Websocket Connection Opened")
-	for {
+	rndStr := make([]rune, num)
 
-		_ , data, err := conn.ReadMessage()
-
-		if err != nil {
-			if errr, ok := err.(net.Error); ok && errr.Timeout() {
-
-				fmt.Println("Client Disconnected")
-				return
-			}else{
-				log.Println(err)
-				break
-			}
-		}
-		conn.WriteMessage(websocket.TextMessage,data)
-
-
-
-
+	for i := range rndStr {
+		rndStr[i] = legalChars[rand.Intn(len(legalChars))]
 	}
+
+	return string(rndStr)
 
 }
 
@@ -312,9 +478,13 @@ func echo(conn *websocket.Conn) {
 type response struct {
 	Status bool `json:"status"`
 	Message string `json:"message"`
+	Uuid string `json:"uuid"`
+	GameID string `json:"gameid"`
+	RoomID string `json:"roomid"`
+
 }
 
-func (r response) toJSON() string{
+func (r *response) toJSON() string{
 	re, err := json.Marshal(r)
 	if err != nil {
 		log.Println(err)
@@ -324,6 +494,7 @@ func (r response) toJSON() string{
 	}
 	return string(re)
 }
+
 
 
 type joinMessage struct {

@@ -26,11 +26,11 @@
                 <div class="col-row">
                     <button type="button" id="join-btn" onclick="show('join-menu'); hide('main-menu')" class="btn menu-btn add-margin-vertical btn-primary center-block"><i class="fa fa-user-plus" aria-hidden="true"></i> Join Game</button>
                 </div>
-                
+
                 <div class="col-row">
                     <button type="button" id="games-btn" onclick="show('game-menu'); hide('main-menu')" class="btn menu-btn add-margin-vertical btn-primary center-block"><i class="fa fa-gamepad" aria-hidden="true"></i> Game List</button>
                 </div>
-                
+
                 <div class="col-row">
                     <button type="button" id="info-btn" data-toggle="modal" data-target="#info-modal" class="btn menu-btn add-margin-vertical btn-info center-block"><i class="fa fa-info-circle" aria-hidden="true"></i> Info</button>
                 </div>
@@ -38,24 +38,10 @@
 
             <!--                Host Game        -->
 
-            <div class="col-md-4 well" id="host-menu" style="display:none">
-                <div class="col-row" style="width: 100%">
-                    <button style="margin: 0px;" type="button" class="btn menu-btn main-menu-btn btn-primary" onclick="show('main-menu'); hide('host-menu')"><i class=" fa fa-reply" aria-hidden="true"></i></button>
-                    <h1 style="margin-top: 0px;" class="text-center shake" >Host a Game</h1>
+            <div class="col-md-8 well" id="host-menu" style="display:none">
 
-                    <div class="row">
-                        <div class="col-sm-4"><button type="button" class="btn center-block menu-btn main-menu-btn btn-primary">Game 1</button></div>
-                        <div class="col-sm-4"><button type="button" class="btn center-block menu-btn main-menu-btn btn-primary">Game 2</button></div>
-                        <div class="col-sm-4"><button type="button" class="btn center-block menu-btn main-menu-btn btn-primary">Game 3</button></div>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-sm-4"><button type="button" class="btn center-block menu-btn main-menu-btn btn-primary">Game 4</button></div>
-                        <div class="col-sm-4"><button type="button" class="btn center-block menu-btn main-menu-btn btn-primary">Game 5</button></div>
-                        <div class="col-sm-4"><button type="button" class="btn center-block menu-btn main-menu-btn btn-primary">Game 6</button></div>
-                    </div>
-                    
-                </div>
+                {{template "hostmenu" .}}
+
             </div>
 
 
@@ -63,52 +49,18 @@
 
 
             <!--                Join Game        -->
-
             <div class="col-md-4 well" id="join-menu" style="display:none">
-                <div class="col-row" style="width: 100%">
-                    <button style="margin: 0px;" type="button"  class="btn menu-btn main-menu-btn btn-primary" onclick="show('main-menu'); hide('join-menu')"><i class="fa fa-reply" aria-hidden="true"></i></button>
-                    <h1 style="margin-top: 0px;" class="text-center shake" >Join a Game</h1>
-                    
-                    <form id="join-form">
-                        <div class="input-group">
-                            <span class="input-group-addon"><i class="glyphicon glyphicon-user"></i></span>
-                            <input id="user-name" type="text" class="form-control" name="name" placeholder="Enter Name">
-                        </div>
-                        <br>
-                        <div class="input-group">
-                            <span class="input-group-addon"><i class="glyphicon glyphicon-circle-arrow-right"></i></span>
-                            <input id="room-code" type="text" class="form-control" name="room" placeholder="Enter Code">
-                        </div>
-
-                        <button style="margin-top: 20px" type="submit" class="btn center-block btn-primary"><i class="glyphicon glyphicon-globe" aria-hidden="true"></i> Join Game</button>
-
-                    </form>
-
-
-                </div>
+                {{ template "joinmenu" . }}
             </div>
-            
-            
-            
+
+
+
             <!--          Game Menu            -->
-        
             <div id="game-menu" class="carousel slide" data-interval="0" style="display:none; width: 80%">
-                
-                <button style="margin: 0px;" type="button" class="btn menu-btn main-menu-btn btn-primary" onclick="show('main-menu'); hide('game-menu')"><i class="fa fa-reply" aria-hidden="true"></i></button>
-                
-                <ol class="carousel-indicators">
-
-
-                </ol>
-
-                <div class="carousel-inner" role="listbox">
-                    
-
-
-                </div>                
+                {{ template "gamemenu" . }}
             </div>
-            
-            
+
+
             <!--                Loading Screen        -->
 
             <div class="col-md-4 well" id="loading-menu" style="display:none">
