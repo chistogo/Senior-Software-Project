@@ -1,5 +1,12 @@
 package gameserver
 
+import (
+	"fmt"
+	"net"
+	"log"
+	"github.com/gorilla/websocket"
+)
+
 const waiting = 0
 const playing = 1
 
@@ -67,10 +74,112 @@ func (r *Room) StartServer(){
 			for k := range(r.Players){
 				r.Players[k].MessageReceive <- msg
 			}
+		case msg := <- r.HostMessage:
+			r.Host.MessageReceive <- msg
 		}
 	}
 
 }
+
+func StartClient(conn *websocket.Conn, player *Player) {
+	fmt.Println("Websocket Connection Opened")
+
+	// This handles the Read of the socket
+	go func(){
+		for {
+
+			_ , data, err := conn.ReadMessage()
+			if err != nil {
+				player.Disconnect <- true
+				player.Room.RemovePlayer(player)
+				player = nil
+				if errr, ok := err.(net.Error); ok && errr.Timeout() {
+
+					fmt.Println("Client Disconnected")
+					return
+				}else{
+					log.Println(err)
+					return
+				}
+			}
+
+			//player.Room.HostMessage <- player.Name+": "+string(data[:])
+			player.Room.HostMessage <- string(data[:])
+
+		}
+
+	}()
+
+	// This handles the writing of of the web socket
+	go func(){
+		for{
+			select {
+			case msg := <- player.MessageReceive:
+				conn.WriteMessage(websocket.TextMessage, []byte(msg))
+			case disconnect := <- player.Disconnect:
+				if(disconnect){
+					conn.Close()
+					return
+				}
+
+			}
+
+		}
+	}()
+
+
+}
+
+
+func StartHost(conn *websocket.Conn, player *Player) {
+	fmt.Println("Host Websocket Connection Opened")
+
+	// This handles the Read of the socket
+	go func(){
+		for {
+
+			_ , data, err := conn.ReadMessage()
+			if err != nil {
+				player.Disconnect <- true
+				player.Room.RemovePlayer(player)
+				player = nil
+				if errr, ok := err.(net.Error); ok && errr.Timeout() {
+
+					fmt.Println("Client Disconnected")
+					return
+				}else{
+					log.Println(err)
+					return
+				}
+			}
+
+			//player.Room.ClientMessage <- player.Name+": "+string(data[:])
+			player.Room.ClientMessage <- string(data[:])
+
+		}
+
+	}()
+
+	// This handles the writing of of the web socket
+	go func(){
+		for{
+			select {
+			case msg := <- player.MessageReceive:
+				conn.WriteMessage(websocket.TextMessage, []byte(msg))
+			case disconnect := <- player.Disconnect:
+				if(disconnect){
+					conn.Close()
+					return
+				}
+
+			}
+
+		}
+	}()
+
+}
+
+
 
 
 
@@ -93,10 +202,6 @@ func NewPlayer(uuid string, name string, room *Room) *Player{
 
 	return &p
 }
-
-
-
-
 
 
 type Player struct{

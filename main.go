@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"html/template"
 	"github.com/gorilla/websocket"
-	"net"
 	"log"
 	"sswebsite/gameserver"
 	"github.com/satori/go.uuid"
@@ -15,7 +14,7 @@ import (
 )
 
 
-// This is global so that the templates are only generated once
+
 
 /*
 ===================
@@ -25,38 +24,40 @@ Debug Mode  Effects
 
  */
 var debug bool = true
-var templates map[string]*template.Template
-var games map[string]*gameserver.Game
-var rooms map[string]*gameserver.Room // TODO: Look up if this needs a lock
+const port string = ":80"
+
+//These are global so
+var templates map[string]*template.Template // Read Only after initialization
+var games map[string]*gameserver.Game //  Read Only after initialization
+var rooms map[string]*gameserver.Room // TODO: Possible Race Condition,
 
 
 func main(){
 
 	fmt.Println("Welcome to the SS Experience Web Application Server")
+	fmt.Println("Hosting on Port"+port)
+	rand.Seed(time.Now().UnixNano()) // SEED THAT RANDOM NUMBER
 
-	rand.Seed(time.Now().UnixNano()) // SEED THAT RANDOM
 
+	//TODO: Combine Templates and Handlers into one intitPages Function
 	initTemplates() // Initializes the templates and puts them in the global variable
 	initGames() // Creates and initializes the game structs
-	initRooms() //TODO Modify THIS! Normally the rooms are generated when users request. This is just for debugging.
 	initHandlers() // This creates the handlers for each of the URL paths
 
 	//Start Web Server
-	panic(http.ListenAndServe(":80", nil))
+	panic(http.ListenAndServe(port, nil))
 
-	// If this is ever reach then the something is wrong. One possibility is that a service
-	// is already using the port
+	//If this terminates on launch, make sure port is not in use
 	fmt.Println("SS Application has terminated")
 }
 
-// This function initializes the template pages.
+// This function initializes the template pages from the html to the global template structure
 func initTemplates() {
 
 	//Initialize the map if not already done
 	if templates == nil {
 		templates = make(map[string]*template.Template)
 	}
-
 
 	//Combines the templates into one template for the index page
 	templates["index"] = template.Must(template.ParseFiles(
@@ -71,44 +72,38 @@ func initTemplates() {
 	templates["game"] = template.Must(template.ParseFiles(
 		"tmpl/game.html"))
 
-
-	// Web Socket Test Page
-	templates["wstest"] = template.Must(template.ParseFiles(
-		"tmpl/wstest.html"))
-
-
+	//Controller Page
+	templates["controller"] = template.Must(template.ParseFiles(
+		"tmpl/controller.html"))
 
 }
 
 
+// initGames initializes the games structs in the global game structure. The purpose is so the rest of the code has a
+// record of all the games in memory.
 func initGames() {
 	//Initialize the games if not already done
 	if games == nil {
 		games = make(map[string]*gameserver.Game)
 	}
-
-	// Create the game structs here
-	games["TestGame"] = &gameserver.Game{Id: "testGame", Players:4}
-	games["chat"] = &gameserver.Game{Id: "chat", Players:30,Name:"Chat Room",Script:"/static/js/wstest.js"}
-	games["game2"] = &gameserver.Game{Id: "Game 2", Players:2}
-
-}
-
-func initRooms(){
 	if rooms == nil {
 		rooms = make(map[string]*gameserver.Room)
 	}
 
-	rooms["TestRoom"] = gameserver.CreateRoom(games["TestGame"])
-	go rooms["TestRoom"].StartServer() // This is the thread that manages the room
+	//TODO: Read this from file.
+	games["chat"] = &gameserver.Game{Id: "chat", Players:30,Name:"Chat Room",Script:"/static/js/wstest.js"}
+	games["pong"] = &gameserver.Game{Id: "pong", Players:2,Name:"Multi-Pong",Script:"/static/js/game/sample/pong.js"}
+	games["shooter"] = &gameserver.Game{Id:"shoot",Players:4,Name:"Not-Pong Shooter",Script:"/static/js/game/supa-shoota/supa-shoota.js"}
 }
 
+
+// initHandlers initializes the handlers for each of our pages. This include static files and websocket handler
+// initialization
 func initHandlers(){
 
 	// Create the static file server.
 	fs := http.FileServer(http.Dir("static/"))
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
-
 
 	//Creating the handler for the index page
 	http.HandleFunc("/", index)
@@ -116,24 +111,27 @@ func initHandlers(){
 	//Creating the handler for the game page
 	http.HandleFunc("/game", gameHandler)
 
+	//Creating the handler for the game page
+	http.HandleFunc("/controller", controllerHandler)
+
 	//Handler for the AJAX request for joining room
-	http.HandleFunc("/join" , joinHandler);
+	http.HandleFunc("/join" , joinHandler)
 
 	//Handler for the AJAX request for creating a room
-	http.HandleFunc("/create" , createHandler);
+	http.HandleFunc("/create" , createHandler)
 
-	//Handler for Websocket
+	//Handler for Web Socket
 	http.HandleFunc("/ws", wsHandler)
 
-	http.HandleFunc("/wstest", func(w http.ResponseWriter, r *http.Request) {
-		templates["wstest"].Execute(w, nil)
-	})
+
 }
 
-
+// This is the function that is called to handle the landing page of the web application. Since this is the URL is '/'
+// functions might default to this handler if unknown thus we handle that case here too.
 func index(w http.ResponseWriter, r *http.Request) {
 
-	if(debug){
+	if debug {
+		//This will update the changes to the HTML every page load
 		initTemplates()
 	}
 
@@ -146,6 +144,8 @@ func index(w http.ResponseWriter, r *http.Request) {
 }
 
 
+// This is a http handler that should handle HTTP errors. Call this function and the status to through and error.
+// TODO: Possible room for improvement, Making interesting 404 pages
 func unknownHandler(w http.ResponseWriter, r *http.Request, status int) {
 	w.WriteHeader(status)
 	if status == http.StatusNotFound {
@@ -153,6 +153,9 @@ func unknownHandler(w http.ResponseWriter, r *http.Request, status int) {
 	}
 }
 
+
+// This handler for post request that is used for the AJAX Join Button. The purpose of this is joinHandler is to take
+// a name and room code and if valid return the information the user need to start a websocket connection to our server
 func joinHandler(w http.ResponseWriter, r *http.Request) {
 
 	if r.Header.Get("Origin") != "http://"+r.Host {
@@ -160,11 +163,19 @@ func joinHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// This is a response struct. It should contain the information that is returned to the client.
 	res := response{}
+
 
 	err := r.ParseForm()
 	if err != nil{
 		log.Println(err)
+		res.Status = false
+		res.Message = "Could not Parse Form"
+		//w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, res.toJSON())
+		return
+
 	}
 
 	playerName := r.PostFormValue("name") // to get params value with key
@@ -174,14 +185,16 @@ func joinHandler(w http.ResponseWriter, r *http.Request) {
 	if playerName == "" || roomID == ""{ //Making sure the Params were sent
 		res.Status = false
 		res.Message = "Invalid Parameters"
+		//w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, res.toJSON())
 		return
 	}else if rooms[roomID] == nil{ // Trying to find the room
 		res.Status = false
 		res.Message = "Room not Found"
+		//w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, res.toJSON())
 		return
-	}else{
+	}else if debug{
 		fmt.Printf("RoomID: %v and Player Name: %v \n",roomID, playerName)
 	}
 
@@ -189,7 +202,7 @@ func joinHandler(w http.ResponseWriter, r *http.Request) {
 	id := uuid.NewV4()
 	uuidString := id.String()
 
-	//
+	// Create the player Struct with given room.
 	newPlayer := gameserver.NewPlayer(uuidString,playerName, rooms[roomID])
 
 
@@ -300,6 +313,25 @@ func gameHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 
+func controllerHandler(w http.ResponseWriter, r *http.Request) {
+
+	err := r.ParseForm()
+	if err != nil{
+		log.Println(err)
+	}
+
+	roomID := r.FormValue("r") // to get params value with key
+
+	if(rooms[roomID] == nil){
+		fmt.Fprint(w, "Error: Room not Found")
+		return
+	}
+
+	fmt.Printf("", )
+	templates["controller"].Execute(w, rooms[roomID].Game)
+
+}
+
 
 
 func wsHandler(w http.ResponseWriter, r *http.Request) {
@@ -347,7 +379,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if(jnMsg.UUID == rooms[jnMsg.Room].Host.Uuid){
-		startHost(conn,rooms[jnMsg.Room].Host)
+		gameserver.StartHost(conn,rooms[jnMsg.Room].Host)
 		return
 	}
 
@@ -358,105 +390,14 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 
-	startClient(conn,rooms[jnMsg.Room].Players[jnMsg.UUID])
-
-}
-func startHost(conn *websocket.Conn, player *gameserver.Player) {
-	fmt.Println("Host Websocket Connection Opened")
-
-	// This handles the Read of the socket
-	go func(){
-		for {
-
-			_ , data, err := conn.ReadMessage()
-			if err != nil {
-				player.Disconnect <- true
-				player.Room.RemovePlayer(player)
-				player = nil
-				if errr, ok := err.(net.Error); ok && errr.Timeout() {
-
-					fmt.Println("Client Disconnected")
-					return
-				}else{
-					log.Println(err)
-					return
-				}
-			}
-
-			player.Room.ClientMessage <- player.Name+": "+string(data[:])
-
-		}
-
-	}()
-
-	// This handles the writing of of the web socket
-	go func(){
-		for{
-			select {
-			case msg := <- player.MessageReceive:
-				conn.WriteMessage(websocket.TextMessage, []byte(msg))
-			case disconnect := <- player.Disconnect:
-				if(disconnect){
-					conn.Close()
-					return
-				}
-
-			}
-
-		}
-	}()
+	gameserver.StartClient(conn,rooms[jnMsg.Room].Players[jnMsg.UUID])
 
 }
 
 
 
-func startClient(conn *websocket.Conn, player *gameserver.Player) {
-	fmt.Println("Websocket Connection Opened")
-
-	// This handles the Read of the socket
-	go func(){
-		for {
-
-			_ , data, err := conn.ReadMessage()
-			if err != nil {
-				player.Disconnect <- true
-				player.Room.RemovePlayer(player)
-				player = nil
-				if errr, ok := err.(net.Error); ok && errr.Timeout() {
-
-					fmt.Println("Client Disconnected")
-					return
-				}else{
-					log.Println(err)
-					return
-				}
-			}
-
-			player.Room.ClientMessage <- player.Name+": "+string(data[:])
-
-		}
-
-	}()
-
-	// This handles the writing of of the web socket
-	go func(){
-		for{
-			select {
-			case msg := <- player.MessageReceive:
-				conn.WriteMessage(websocket.TextMessage, []byte(msg))
-			case disconnect := <- player.Disconnect:
-				if(disconnect){
-					conn.Close()
-					return
-				}
-
-			}
-
-		}
-	}()
 
 
-}
 
 
 func RandomString(num int) string{
@@ -502,3 +443,4 @@ type joinMessage struct {
 	Room string `json:"room"`
 	UUID string `json:"uuid"`
 }
+

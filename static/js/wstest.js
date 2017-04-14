@@ -48,6 +48,7 @@ function setCookie(key , value , expiration) {
 function init() {
     document.write(html);
     if(getCookie("name") == undefined || getCookie("uuid") == undefined){
+        console.log("Name or UUID not defined");
         return
     }
 
@@ -85,7 +86,6 @@ function init() {
 
 function sendMessage(message) {
     //document.getElementById("output").innerHTML += "<p>> SENT: " + message + "</p>";
-
     websocket.send(message);
 }
 

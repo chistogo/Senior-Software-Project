@@ -62,7 +62,7 @@ $( "#join-form" ).submit(function( event ) {
                 if(data.status){
                     setCookie("name",$("#join-form").serializeArray()[0]['value'])
                     setCookie("uuid",data.message)
-                    window.location = "/wstest?r="+$("#join-form").serializeArray()[1]['value'];
+                    window.location = "/controller?r="+$("#join-form").serializeArray()[1]['value'];
 
                 }else{
                     alert("Error: "+data.message);
