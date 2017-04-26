@@ -11,68 +11,89 @@ var GAME_ENDED = 3;
 
 
 function Controller(){
-	var controllerServerSocket = null;
-	var active = false;
-	this.data = {};
-	this.htmlObjects = [];
+    var controllerServerSocket = null;
+    var active = false;
+    this.data = {};
+    this.htmlObjects = [];
 
-	this.setup = function(){
-		//special initilization message
-		var message = {
-			name:getCookie("name"),
-			room:getCookie("gameroom"),
-			uuid:getCookie("uuid")
-		}
-		controllerServerSocket = new WebSocket("ws://digibara.com/ws");
-		controllerServerSocket.onopen = function(){
-			controllerServerSocket.send(JSON.stringify(message));
-			active = true;
-		}
-		controllerServerSocket.onmessage = function(msg){
-			console.log("message received");
-			//TODO: handle parse errors here
-			pack = JSON.parse(msg);
-			if(msg.msgtype == MSG_TYPE_END_GAME){
-				controllerServerSocket.close();
-			}
-			//TODO: handle incoming messages from host - not first priority
-		}
-	}
+    this.setup = function(){
+        //special initilization message
 
-	this.addHTMLObject = function(obj,objID){
-		document.getElementsByTagName("body")[0].insertBefore(obj,htmlBod.firstChild);
-		this.htmlObjects[""+objID] = obj;
-	}
 
-	//takes in a string representing css for the page
-	this.setCSS = function(css){
-		var newStyle = document.createElement("style");
-		newStyle.type = "text/css";
-		newStyle.innerHTML = css;
-		document.getElementsByTagName("head")[0].appendChild(newStyle);
-	}
 
-	//sends the current state
-	this.sendState = function(){
-		this.sendMessage(this.data);
-	}
+        //This is the message sent directly to the actual service not the SS Host
+        controllerServerSocket = new WebSocket("ws://localhost/ws");
+        controllerServerSocket.onopen = function(){
 
-	//sends a specific message
-	this.sendMessage = function(msg){
-		if(active){
-			var message = {
-				msgtype: MSG_TYPE_CONTROL_DATA,
-				uuid:getCookie("uuid"),
-				data:msg
-			}
-			controllerServerSocket.sendMessage(JSON.stringify(message));
-		}
-	}
+            var message = {
+                name:getCookie("name"),
+                room:getParameterByName("r"),
+                uuid:getCookie("uuid")
+            }
 
-	//TODO: provide a looping mechanism that calls sendState at a specified framerate if the developer wants it
+            controllerServerSocket.send(JSON.stringify(message));
+            console.log(message);
+            //
+            message = {
+                msgtype: MSG_TYPE_NEW_PLAYER_JOIN,
+                uuid: getCookie("uuid"),
+                name:getCookie("name")
+            }
+            controllerServerSocket.send(JSON.stringify(message));
+            active = true;
+        }
+        controllerServerSocket.onmessage = function(packet){
+            console.log("message received");
+            if(packet.constructor !== "string".constructor){
+                //this message is already JSON
+                msg = packet;
+            } else {
+                msg = JSON.parse(packet);
+                //TODO: handle parse errors here
+            }
+            if(msg.msgtype == MSG_TYPE_END_GAME){
+                controllerServerSocket.close();
+            }
+            //TODO: handle incoming messages from host - not first priority
+        }
+    }
+
+    this.addHTMLObject = function(obj,objID){
+        var htmlBod = document.getElementsByTagName("body")[0];
+        htmlBod.insertBefore(obj,htmlBod.firstChild);
+        this.htmlObjects[""+objID] = obj;
+    }
+
+    //takes in a string representing css for the page
+    this.setCSS = function(css){
+        var newStyle = document.createElement("style");
+        newStyle.type = "text/css";
+        newStyle.innerHTML = css;
+        document.getElementsByTagName("head")[0].appendChild(newStyle);
+    }
+
+    //sends the current state
+    this.sendState = function(){
+        this.sendMessage(this.data);
+    }
+
+    //sends a specific message
+    this.sendMessage = function(msg){
+        if(active){
+            var message = {
+                msgtype: MSG_TYPE_CONTROL_DATA,
+                uuid:getCookie("uuid"),
+                data:msg
+            }
+            console.log("sending message: ");
+            console.log(msg);
+            controllerServerSocket.send(JSON.stringify(message));
+        }
+    }
+
+    //TODO: provide a looping mechanism that calls sendState at a specified framerate if the developer wants it
 
 }
-
 
 function getParameterByName(name, url) {
     if (!url) {
@@ -85,7 +106,7 @@ function getParameterByName(name, url) {
     if (!results[2]) return '';
     return decodeURIComponent(results[2].replace(/\+/g, " "));
 }
- 
+
 function getCookie(key) {
     key = key+'='
     var records = document.cookie.split('; ');
@@ -98,15 +119,14 @@ function getCookie(key) {
         }
     }
 }
- 
+
 function setCookie(key , value , expiration) {
- 
+
     //Note this cookie is deleted when window is closed
     if(expiration === null){
         document.cookie = key+"="+value+";path=/"
     }else{
         document.cookie = key+"="+value+"; expires="+expiration+"; path=/"
     }
- 
-}
 
+}

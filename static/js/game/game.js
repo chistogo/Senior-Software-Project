@@ -1,5 +1,7 @@
 //Game API
 
+var DEBUG = false;
+
 var MSG_TYPE_START_GAME = 0;
 var MSG_TYPE_END_GAME = 1;
 var MSG_TYPE_NEW_PLAYER_JOIN = 2;
@@ -87,14 +89,14 @@ function Canvas(canv, game){
 //min players, max players
 function Game(minP, maxP){
 	var htmlBod = document.getElementsByTagName("body")[0];
-	var frame_rate = 33;
+	var frame_rate =60;
 	//TODO: combine active and lobbyComplete 
 	var active = true;
 	var lobbyComplete = false;
 	var gameServerSocket = null;
 	var minPlayers = minP;
 	var maxPlayers = maxP;
-	var gameStatus = GAME_ACTIVE;
+	var gameStatus = GAME_CREATED;
 	this.playerIDs = [];
 	this.params = {};
 	this.canvs = [];
@@ -138,9 +140,17 @@ function Game(minP, maxP){
 	}
 
 	this.startLobby = function(callback){
+
+        if(DEBUG){
+            callback();
+            return;
+        }
+
+
+		gameStatus = GAME_LOBBYING;
 		//special initialization message
 		var message = {
-			name:getCookie("name"),
+			name:"HOST	",
 			room:getParameterByName('r'),
 			uuid:getCookie("uuid")
 		}
@@ -152,31 +162,36 @@ function Game(minP, maxP){
 		var _this = this;
 		var _maxPlayers = maxPlayers;
 		var _minPlayers = minPlayers;
-		var _gameStatus = GAME_ACTIVE;
+		var _gameStatus = gameStatus;
 		lobbyComplete = true;
 		gameServerSocket.onmessage = function(msg){
 			//TODO: handle parse error
-
+			console.log("Start Lobby: ");console.log(msg);
 			var pack = JSON.parse(msg.data);
 			if(_gameStatus == GAME_LOBBYING && pack.msgtype == MSG_TYPE_NEW_PLAYER_JOIN){
 				//add player's UUID to array of players
+				console.log("Player Joined")
 				_this.playerIDs.push(pack.uuid);
 				if(_this.playerIDs.length == _maxPlayers){
+					console.log("Max Players Reached. Starting Game")
 					var m_pack = {
 						msgtype: MSG_TYPE_START_GAME,
 						uuid: getCookie("uuid"),
 						data: 0
 					}
 					//start game
+					console.log("Start Game: Calling the call back")
 					gameServerSocket.send(JSON.stringify(m_pack));
+					_gameStatus = GAME_ACTIVE;
 					callback();
 				} else if(_this.playerIDs.length == _minPlayers){
 					//TODO: make game eligible for starting with minPlayers < numPlayers < maxPlayers
 				}
 			} else if(_gameStatus == GAME_ACTIVE && pack.msgtype == MSG_TYPE_CONTROL_DATA){
 				//verify UUID of sending player
-				_this.controlHandler(pack.uuid, pack.data);
-
+				if(_this.playerIDs.indexOf(pack.uuid) >= 0){
+					_this.controlHandler(pack.uuid, pack.data);
+				}
 			}
 		}	
 	}
@@ -191,7 +206,7 @@ function Game(minP, maxP){
 
 	this.startGame = function(){
 		//ensure lobbying has taken place
-		if(!lobbyComplete){
+		if(!lobbyComplete && !DEBUG){
 			this.startLobby();
 		}
 

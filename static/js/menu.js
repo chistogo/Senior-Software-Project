@@ -52,12 +52,10 @@ $( "#join-form" ).submit(function( event ) {
             {
                 //data: return data from server
                 console.log(data);
-
                 try {
                     data = JSON.parse(data);
                 } catch (e) {
                 }
-
 
                 if(data.status){
                     setCookie("name",$("#join-form").serializeArray()[0]['value'])

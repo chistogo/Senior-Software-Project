@@ -3,18 +3,28 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    
+
+    <!-- Font Awesome-->
+    <link rel="stylesheet" href="/static/css/font-awesome.min.css">
+    <!-- Bootstrap Stylesheets   -->
+    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Main Style -->
+    <link href="/static/css/main.css" rel="stylesheet">
+
+
     <title>{{ .Name }}</title>
 
     <!--Game API-->
     <script src="/static/js/controller/controller.js"></script>
+    <script src="/static/js/controller/controllers/chriscontroller.js"></script>
     <!--Game JavaScript-->
-    <script src="{{ .Script }}"></script>
+    <!--<script src="{{ .Script }}"></script>-->
 
 
 </head>
 <body>
 
+    <div id="content-here"></div>
 
 </body>
 </html>

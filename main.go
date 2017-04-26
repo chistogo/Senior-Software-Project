@@ -94,6 +94,8 @@ func initGames() {
 	games["chat"] = &gameserver.Game{Id: "chat", Players:30,Name:"Chat Room",Script:"/static/js/wstest.js"}
 	games["pong"] = &gameserver.Game{Id: "pong", Players:2,Name:"Multi-Pong",Script:"/static/js/game/sample/pong.js"}
 	games["shooter"] = &gameserver.Game{Id:"shoot",Players:4,Name:"Not-Pong Shooter",Script:"/static/js/game/supa-shoota/supa-shoota.js"}
+	games["race"] = &gameserver.Game{Id:"race",Players:4,Name:"Roll N Rock Racer",Script:"/static/js/game/roll-n-rock-racing/game.js"}
+
 }
 
 
@@ -158,10 +160,10 @@ func unknownHandler(w http.ResponseWriter, r *http.Request, status int) {
 // a name and room code and if valid return the information the user need to start a websocket connection to our server
 func joinHandler(w http.ResponseWriter, r *http.Request) {
 
-	if r.Header.Get("Origin") != "http://"+r.Host {
-		http.Error(w, "Origin not allowed", 403)
-		return
-	}
+	//if r.Header.Get("Origin") != "http://"+r.Host {
+	//	http.Error(w, "Origin not allowed", 403)
+	//	return
+	//}
 
 	// This is a response struct. It should contain the information that is returned to the client.
 	res := response{}
@@ -222,10 +224,10 @@ func joinHandler(w http.ResponseWriter, r *http.Request) {
 func createHandler(w http.ResponseWriter, r *http.Request) {
 
 
-	if r.Header.Get("Origin") != "http://"+r.Host {
-		http.Error(w, "Origin not allowed", 403)
-		return
-	}
+	//if r.Header.Get("Origin") != "http://"+r.Host {
+	//	http.Error(w, "Origin not allowed", 403)
+	//	return
+	//}
 
 	//This will be the return message to the client
 	res := response{}
@@ -367,6 +369,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 	jnMsg := joinMessage{}
 	err = json.Unmarshal(data,&jnMsg)
 	if (err != nil){
+		log.Println("Failed Unmarshal JSON in WSHandler")
 		log.Println(err)
 		return
 	}
